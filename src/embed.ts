@@ -1,17 +1,19 @@
-import fs from "fs-extra";
-import dotenv from "dotenv";
-import { OpenAI } from "openai";
+import fs from "fs/promises";
+import path from "path";
+import { config } from "dotenv";
+import OpenAI from "openai";
 
-dotenv.config();
+config(); // .env の読み込み
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
-const CHUNK_SIZE = 500;
+const CHUNK_SIZE = 500; // 文字数チャンクサイズ
 
 async function main() {
-  const text = await fs.readFile("./docs/sample.txt", "utf-8");
-
-  console.log(text);
+  const filePath = path.resolve(__dirname, "../data/sample.txt");
+  const text = await fs.readFile(filePath, "utf-8");
 
   // チャンク分割
   const chunks: string[] = [];
@@ -21,23 +23,23 @@ async function main() {
 
   console.log(`🔹 ${chunks.length} チャンクに分割されました`);
 
-  // ベクトル化
-  const vectors = await Promise.all(
-    chunks.map(async (chunk, i) => {
-      const res = await openai.embeddings.create({
-        model: "text-embedding-3-small",
-        input: chunk,
-      });
-      return {
-        id: `chunk-${i}`,
-        text: chunk,
-        embedding: res.data[0].embedding,
-      };
-    })
-  );
+  const embeddings = [];
 
-  console.log("✅ ベクトル化完了");
-  console.log(vectors.slice(0, 1)); // 1件だけ表示（デバッグ用）
+  for (const chunk of chunks) {
+    const response = await openai.embeddings.create({
+      model: "text-embedding-3-small",
+      input: chunk,
+    });
+    embeddings.push({
+      text: chunk,
+      embedding: response.data[0].embedding,
+    });
+  }
+
+  const outPath = path.resolve(__dirname, "../data/embeddings.json");
+  await fs.writeFile(outPath, JSON.stringify(embeddings, null, 2));
+
+  console.log(`✅ embeddings.json に保存しました`);
 }
 
 main().catch(console.error);
