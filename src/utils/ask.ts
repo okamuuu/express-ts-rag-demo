@@ -3,7 +3,13 @@ import fs from "fs";
 import path from "path";
 import { cosineSimilarity } from "./similarity";
 
-const openai = new OpenAI();
+import { config } from "dotenv";
+
+config(); // .env の読み込み
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 type ChunkData = {
   text: string;
@@ -20,10 +26,10 @@ export async function getAnswer(question: string): Promise<string> {
   const questionEmbedding = questionEmbeddingRes.data[0].embedding;
 
   // 埋め込み済みのデータを読み込む
-  const dataPath = path.join(__dirname, "data.json");
+  const dataPath = path.join(__dirname, "../../data/embeddings.json");
   const chunks: ChunkData[] = JSON.parse(fs.readFileSync(dataPath, "utf-8"));
 
-  // 類似度の高いチャンクを上位3件抽出
+  // 類似度の高いチャンクを上位3件抽出（★ 類似度付きで出力）
   const similarChunks = chunks
     .map((chunk) => ({
       ...chunk,
@@ -31,6 +37,13 @@ export async function getAnswer(question: string): Promise<string> {
     }))
     .sort((a, b) => b.similarity - a.similarity)
     .slice(0, 3);
+
+  // デバッグ出力: 類似チャンク表示（★追加）
+  console.log("🔍 Top similar chunks:");
+  similarChunks.forEach((chunk, index) => {
+    console.log(`\n#${index + 1} [score: ${chunk.similarity.toFixed(4)}]`);
+    console.log(chunk.text);
+  });
 
   const context = similarChunks.map((c) => c.text).join("\n---\n");
 

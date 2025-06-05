@@ -9,10 +9,10 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const CHUNK_SIZE = 500; // 文字数チャンクサイズ
+const CHUNK_SIZE = 20; // 文字数チャンクサイズ
 
 async function main() {
-  const filePath = path.resolve(__dirname, "../data/sample.txt");
+  const filePath = path.resolve(__dirname, "../docs/sample.txt");
   const text = await fs.readFile(filePath, "utf-8");
 
   // チャンク分割
